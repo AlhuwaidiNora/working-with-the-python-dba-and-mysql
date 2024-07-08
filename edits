@@ -1,0 +1,151 @@
+import mysql.connector
+from mysql.connector import Error
+
+def create_connection(host_name, user_name, user_password, db_name=None):
+    connection = None
+    try:
+        if db_name:
+            connection = mysql.connector.connect(
+                host=host_name,
+                user=user_name,
+                passwd=user_password,
+                database=db_name
+            )
+        else:
+            connection = mysql.connector.connect(
+                host=host_name,
+                user=user_name,
+                passwd=user_password
+            )
+        print("Connection to MySQL DB successful")
+    except Error as e:
+        print(f"The error '{e}' occurred")
+
+    return connection
+
+def create_database(connection, query):
+    cursor = connection.cursor()
+    try:
+        cursor.execute(query)
+        print("Database created successfully")
+    except Error as e:
+        print(f"The error '{e}' occurred")
+
+def execute_query(connection, query):
+    cursor = connection.cursor()
+    try:
+        cursor.execute(query)
+        connection.commit()
+        print("Query executed successfully")
+    except Error as e:
+        print(f"The error '{e}' occurred")
+
+def execute_read_query(connection, query):
+    cursor = connection.cursor()
+    result = None
+    try:
+        cursor.execute(query)
+        result = cursor.fetchall()
+        return result
+    except Error as e:
+        print(f"The error '{e}' occurred")
+
+# Main execution flow
+if __name__ == "__main__":
+    # Establish connection
+    connection = create_connection("localhost", "root", "root")
+
+    # Create database
+    create_database_query = "CREATE DATABASE IF NOT EXISTS my_database"
+    create_database(connection, create_database_query)
+
+    # Connect to the new database
+    connection = create_connection("localhost", "root", "root", "my_database")
+
+    # Create users table
+    create_users_table = """
+    CREATE TABLE IF NOT EXISTS users (
+      id INT AUTO_INCREMENT, 
+      name TEXT NOT NULL, 
+      age INT, 
+      gender TEXT, 
+      nationality TEXT, 
+      PRIMARY KEY (id)
+    ) ENGINE = InnoDB
+    """
+    execute_query(connection, create_users_table)
+
+    # Insert users
+    insert_users_query = """
+    INSERT INTO
+      `users` (`name`, `age`, `gender`, `nationality`)
+    VALUES
+      ('James', 25, 'male', 'USA'),
+      ('Leila', 32, 'female', 'France'),
+      ('Brigitte', 35, 'female', 'England'),
+      ('Mike', 40, 'male', 'Denmark'),
+      ('Elizabeth', 21, 'female', 'Canada');
+    """
+    execute_query(connection, insert_users_query)
+
+    # Retrieve users
+    select_users_query = "SELECT * from users"
+    users = execute_read_query(connection, select_users_query)
+    for user in users:
+        print(user)
+
+    # Update a user
+    update_user_query = """
+    UPDATE
+      users
+    SET
+      age = 22
+    WHERE
+      name = 'Elizabeth'
+    """
+    execute_query(connection, update_user_query)
+
+    # Delete a user
+    delete_user_query = "DELETE FROM users WHERE name = 'James'"
+    execute_query(connection, delete_user_query)
+
+    # Create posts table
+    create_posts_table = """
+    CREATE TABLE IF NOT EXISTS posts (
+      id INT AUTO_INCREMENT, 
+      title TEXT NOT NULL, 
+      description TEXT NOT NULL, 
+      user_id INT, 
+      FOREIGN KEY fk_user_id (user_id) REFERENCES users(id), 
+      PRIMARY KEY (id)
+    ) ENGINE = InnoDB
+    """
+    execute_query(connection, create_posts_table)
+
+    # Insert posts
+    insert_posts_query = """
+    INSERT INTO
+      `posts` (`title`, `description`, `user_id`)
+    VALUES
+      ('Happy', 'I am feeling very happy today', 1),
+      ('Hot Weather', 'The weather is very hot today', 2),
+      ('Help', 'I need some help with my work', 2),
+      ('Great News', 'I am getting married', 3),
+      ('Interesting Game', 'It was a fantastic game of tennis', 4),
+      ('Party', 'Anyone up for a late-night party today?', 5);
+    """
+    execute_query(connection, insert_posts_query)
+
+    # Retrieve users and posts
+    select_users_posts = """
+    SELECT
+      users.id,
+      users.name,
+      posts.description
+    FROM
+      posts
+    INNER JOIN users ON users.id = posts.user_id
+    """
+    users_posts = execute_read_query(connection, select_users_posts)
+    for users_post in users_posts:
+        print(users_post)
